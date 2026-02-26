@@ -1,0 +1,53 @@
+{
+	"author": {
+		"name": "Baptiste Pillot",
+		"email": "baptiste@pillot.fr"
+	},
+	"description": "SQL join modelling for relational databases",
+	"devDependencies": {
+		"typescript": "~5.9"
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"exports": {
+		"import": "./esm/sql-join.js",
+		"require": "./cjs/sql-join.js"
+	},
+	"homepage": "https://it.rocks",
+	"files": [
+		"LICENSE",
+		"README.md",
+		"*/*.d.ts",
+		"*/*.js"
+	],
+	"keywords": [
+		"backend",
+		"database",
+		"inner-join",
+		"it.rocks",
+		"join",
+		"left-join",
+		"query",
+		"query-builder",
+		"outer-join",
+		"query",
+		"relational",
+		"right-join",
+		"sql",
+		"table"
+	],
+	"license": "ISC",
+	"name": "@itrocks/sql-join",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/itrocks-ts/sql-join.git"
+	},
+	"scripts": {
+		"build": "npm run build:cjs && npm run build:esm",
+		"build:cjs": "tsc -p tsconfig.cjs.json",
+		"build:esm": "tsc -p tsconfig.esm.json"
+	},
+	"types": "./esm/sql-join.d.ts",
+	"version": "0.0.1"
+}
