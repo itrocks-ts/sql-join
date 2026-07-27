@@ -5,22 +5,19 @@
 	},
 	"description": "SQL join modelling for relational databases",
 	"devDependencies": {
-		"typescript": "~5.9"
+		"typescript": "^6.0"
 	},
 	"engines": {
-		"node": ">=18"
+		"node": ">=24"
 	},
-	"exports": {
-		"import": "./esm/sql-join.js",
-		"require": "./cjs/sql-join.js"
-	},
-	"homepage": "https://it.rocks",
+	"exports": "./cjs/sql-join.js",
 	"files": [
 		"LICENSE",
 		"README.md",
-		"*/*.d.ts",
-		"*/*.js"
+		"cjs",
+		"!*.map"
 	],
+	"homepage": "https://it.rocks",
 	"keywords": [
 		"backend",
 		"database",
@@ -44,10 +41,7 @@
 		"url": "git+https://github.com/itrocks-ts/sql-join.git"
 	},
 	"scripts": {
-		"build": "npm run build:cjs && npm run build:esm",
-		"build:cjs": "tsc -p tsconfig.cjs.json",
-		"build:esm": "tsc -p tsconfig.esm.json"
+		"build": "tsc"
 	},
-	"types": "./esm/sql-join.d.ts",
-	"version": "0.0.1"
+	"version": "0.0.2"
 }
