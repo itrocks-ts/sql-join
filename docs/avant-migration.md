@@ -7,9 +7,9 @@ Ce document prépare la migration de `ITRocks\Framework\Sql\Join` vers
 injecter et les fonctionnalités à livrer par paliers.
 
 Le package TypeScript doit rester indépendant du framework et de tout moteur de
-base de données. Une table et une propriété sont donc des valeurs génériques :
-classe, type, objet de réflexion, objet libre ou chaîne. Leur interprétation est
-fournie à `sqlJoinDependsOn(...)`.
+base de données. Il manipule quatre notions : `TableDefinition` et `ColumnDefinition`
+sont des objets libres décrivant le modèle, tandis que `table` et `column` sont les
+noms SQL correspondants. Leur résolution est fournie à `sqlJoinDependsOn(...)`.
 
 Sources étudiées, à la révision PHP `8454258fc92574cc5ad35207293311f56d7fbb42` :
 
@@ -67,7 +67,7 @@ Le port TypeScript ne prendra pas en charge `OUTER JOIN`.
 Comportements publics observés, à reprendre lorsqu'ils servent le nouveau
 contrat :
 
-- `foreignSql()` et `masterSql()` construisent une référence qualifiée
+- `foreignSql()` et `masterSql()` construisent historiquement une référence qualifiée
   ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join.php:147)) ;
 - `newInstance(...)` initialise toutes les données principales
   ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join.php:165)) ;
@@ -76,15 +76,15 @@ contrat :
 - la conversion en chaîne ajoute le type entre crochets à des fins de diagnostic
   ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join.php:138)).
 
-En TypeScript, les noms peuvent suivre les conventions usuelles (`foreignSql`,
-`toSql`, `toString`), mais le contrat fonctionnel doit rester reconnaissable.
+En TypeScript, les deux côtés sont nommés `left` et `right` (`leftSql`, `rightSql`),
+avec `toSql` et `toString` pour le rendu. Le contrat fonctionnel reste reconnaissable.
 La construction principale utilisera des options nommées plutôt que la longue
 fabrique positionnelle PHP.
 
 ### `Joins`
 
-`Joins` mémorise la table racine, les tables et propriétés rencontrées, les
-jointures indexées par chemin et le compteur d'alias. Le constructeur peut
+`Joins` mémorise la définition de table racine, les définitions rencontrées, leurs
+noms SQL, les jointures indexées par chemin de colonnes et le compteur d'alias. Le constructeur peut
 résoudre immédiatement plusieurs chemins
 ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Joins.php:110)).
 
@@ -132,28 +132,27 @@ Les noms ci-dessous décrivent le besoin, pas encore une signature définitive.
 
 | Besoin | Fonction ou résultat attendu | Palier |
 |---|---|---:|
-| Identité d'une table | clé stable permettant les caches et comparaisons | 1 |
-| Nom SQL d'une table | équivalent générique de `Dao::storeNameOf` | 1 |
-| Normalisation d'une table | équivalent de `Builder::className`, sans imposer une classe | 1 |
-| Propriétés d'une table | liste ou dictionnaire de descripteurs | 1 |
-| Propriété par nom | résolution locale d'un segment de chemin | 1 |
-| Découpage d'un chemin | fonction consciente des parenthèses ; une valeur par défaut locale est possible | 1 |
-| Description d'une propriété | nom stocké, caractère scalaire/objet, cible, multiplicité, obligation et stockage en valeur | 1 |
-| Relation inverse | `foreignAnnotationOf(property)` comme demandé par les specs | 1 |
-| Nom de colonne | équivalent de `Store_Name_Annotation::of` | 1 |
-| Propriété composante | information équivalente à `@component` | 1 |
+| Identité d'une `TableDefinition` | clé stable permettant les caches et comparaisons | 1 |
+| Nom SQL `table` | équivalent générique de `Dao::storeNameOf` | 1 |
+| Colonnes d'une table | dictionnaire de `ColumnDefinition` | 1 |
+| Colonne par segment | résolution locale depuis une `TableDefinition` | 1 |
+| Table cible | `TableDefinition` cible d'une relation décrite par une `ColumnDefinition` | 1 |
+| Découpage d'un `columnPath` | fonction consciente des parenthèses ; une valeur par défaut locale est possible | 1 |
+| Caractéristiques d'une colonne | fonctions booléennes sur `ColumnDefinition` | 1 |
+| Nom SQL `column` | nom stocké utilisé avec les conventions de clés étrangères | 1 |
+| Colonne droite | `ColumnDefinition` inverse d'une collection 1-N | 1 |
+| Colonne composante | information équivalente à `@component` | 1 |
 | Sécurisation d'un nom SQL | fonction de citation ; valeur par défaut avec accents graves, remplaçable par l'adaptateur du `DataSource` | 1 |
 | Rendu SQL externe | rendu d'une sous-requête ou expression fournie par un autre package | 1 |
-| Table de jointure N-N | `{ table, masterColumn, foreignColumn }` calculé par l'adaptateur | 2 |
+| Table de jointure N-N | `{ table, leftColumn, rightColumn }` calculé par l'adaptateur | 2 |
 | Nature de la relation | équivalent de `Link_Annotation::of`, au moins collection ou map | 2 |
 | Résolution d'une table nommée | résolution d'un nom utilisé par un chemin inverse dans le contexte courant | 3 |
 | Polymorphisme | table abstraite, vue, discriminateur et table source | 4 |
 | Classe de lien | parent lié, propriété composite, propriétés propres et éventuel `linkSame` | 5 |
 
-Le contrat gagnerait à regrouper les faits cohérents dans des descriptions
-retournées par peu de fonctions, plutôt qu'à reproduire chaque méthode de la
-réflexion PHP. Il doit néanmoins permettre des adaptateurs fins ;
-`foreignAnnotationOf` reste donc un point d'extension explicite.
+Le contrat injecte des fonctions portant directement sur `TableDefinition` ou
+`ColumnDefinition`, sans ajouter un autre objet descriptif. La résolution de la
+colonne inverse reste exposée par `rightColumnDefinitionOf`.
 
 Les dépendances PHP remplacées par ce contrat sont notamment :
 
@@ -181,21 +180,21 @@ sans connaissance du framework.
 
 À réaliser :
 
-1. Modèle `Join` typé : mode, type, tables, alias, colonnes et métadonnées
-   génériques des deux propriétés.
+1. Modèle `Join` typé : mode, type fonctionnel, `TableDefinition`, `ColumnDefinition`,
+   tables, alias et colonnes SQL.
 2. Rendu d'une jointure explicite et références qualifiées. La fonction de
    sécurisation entoure par défaut les identifiants d'accents graves et échappe
    ceux qu'ils contiennent ; elle est remplaçable avec
    `sqlJoinDependsOn(...)`, par exemple par celle du `DataSource` MySQL.
-3. Construction de `Joins` depuis une table racine et allocation déterministe
-   de `t0`, `t1`, etc., préfixables.
-4. Ajout idempotent d'un ou plusieurs chemins de propriétés ; création
+3. Construction de `Joins` depuis une `TableDefinition` racine, résolution et
+   conservation de sa table SQL, puis allocation déterministe de `t0`, `t1`, etc., préfixables.
+4. Ajout idempotent d'un ou plusieurs `columnPath` ; création
    récursive des jointures intermédiaires.
-5. Propriété scalaire : mémoriser le chemin sans créer de jointure.
+5. Colonne scalaire : mémoriser le chemin sans créer de jointure.
 6. Relation objet simple : `INNER JOIN` si tout le chemin est obligatoire,
    sinon `LEFT JOIN`.
-7. Collection 1-N avec propriété inverse réelle : jointure de l'identifiant de
-   la table maîtresse vers la colonne étrangère.
+7. Collection 1-N avec définition de colonne droite réelle : jointure de l'identifiant
+   de la table gauche vers la colonne de la table droite.
 8. Accesseurs génériques de l'inventaire PHP et ajout manuel d'un `Join`.
 9. `Subquery` limité à une requête et une condition déjà rendables, sans
    dépendance à `sql-build`.
@@ -210,8 +209,9 @@ Les tests PHP à porter en premier sont les propriétés simples, la relation
 objet et la collection 1-N
 ([cas existants](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join_Test.php:19)).
 
-Critère de fin : ces cas fonctionnent avec des objets libres comme des objets
-de réflexion ; aucun import runtime du framework n'est présent.
+Critère de fin : ces cas fonctionnent avec des définitions libres comme avec des
+objets de réflexion ; les définitions restent distinctes des noms SQL résolus et
+aucun import runtime du framework n'est présent.
 
 ### Palier 2 — relations N-N par table de jointure
 
@@ -347,10 +347,10 @@ le dernier palier et pourra être abandonné si aucun consommateur ne le requier
   graves internes. Cette fonction est injectable avec
   `sqlJoinDependsOn(...)`. L'intégration MySQL pourra ainsi utiliser celle de
   son `DataSource` ; ce choix de dialecte n'appartient pas à `sql-join`.
-- `newInstance` est une longue fabrique positionnelle dont la documentation
-  inverse l'ordre de `foreign_alias` et `foreign_table`
+- `newInstance` est une longue fabrique positionnelle propre au PHP, dont la
+  documentation inverse l'ordre de `foreign_alias` et `foreign_table`
   ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join.php:165)).
-  La construction TypeScript utilisera des options nommées.
+  Elle n'est pas portée : TypeScript utilise directement les constructeurs.
 - Les conditions secondaires distinguent une constante d'une colonne en lisant
   son premier caractère `'` ou `"`, puis concatènent la valeur telle quelle
   ([source](/home/baptiste/itrocks/boust/itrocks/framework/sql/join/Join.php:201)).
@@ -415,7 +415,7 @@ périmètre, n'aura pas de test de compatibilité.
 
 ## Ordre de migration recommandé
 
-1. Fixer les types génériques table/propriété, le contrat de dépendances et le
+1. Fixer les génériques `TableDefinition`/`ColumnDefinition`, le contrat de dépendances et le
    rendu d'identifiants.
 2. Livrer et valider le palier 1 avec des fixtures libres, sans réflexion.
 3. Écrire l'adaptateur it.rocks séparément et vérifier les mêmes scénarios avec

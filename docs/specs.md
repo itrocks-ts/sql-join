@@ -1,24 +1,25 @@
+@itrocks/sql-join est un package indépendant de tout framework qui gère une structure de données représentant les
+jointures en SQL standard.
 
-@itrocks/sql-join est un package indépendant de tout framework qui va simplement gérer une structure de données
-représentant les jointures en SQL standard.
+Le modèle distingue uniquement quatre notions pour décrire les tables et leurs champs :
 
-Il doit présenter les mêmes fonctions publiques que celles dans /home/baptiste/itrocks/boust/itrocks/framework/sql/join/*.php.
+- `TableDefinition` : objet libre décrivant une table ; l'intégration it.rocks pourra utiliser un `ReflectionClass` ;
+- `ColumnDefinition` : objet libre décrivant une colonne ; l'intégration pourra utiliser une propriété réfléchie ;
+- `table` : chaîne contenant le nom SQL d'une table ;
+- `column` : chaîne contenant le nom SQL d'une colonne.
 
-Par contre les objets supposés représenter une classe, une propriété, doivent être généralisés en des objets de types
-libres pouvant représenter la structure décrivant une table pour la partie table (qui peut être une classe, un type, un objet de réflexion de classe,
-ou même un objet libre, ou un string avec le nom de la table), et décrivant un champs (donc ça peut être une réflexion de propriété de classe, ou n'importe quoi
-qui permette d'obtenir des infos sur la structure à donner à un champs).
+Le package conserve les définitions et les noms SQL dans chaque jointure. Il ne doit introduire aucune notion
+intermédiaire de classe, type, propriété ou nom de propriété dans son contrat.
 
-Les fonctions qui, à partir d'un objet décrivant la table et d'un objet décrivant le champs, permettent d'obtenir les
-éléments permettant d'avoir les infos plus "SQL" correspondantes, sont à injecter comme dépendance au package.
-Autrement dit tous les use dans le script php qui vont chercher des dépendances en dehors de framwork/sql/join sont à traduire
-dans cette version en typescript en des appels à des fonctions dynamiquement allouées par un appel à dépendances.
+Les fonctions permettant de passer d'une définition à une autre ou à son nom SQL sont injectées avec
+`sqlJoinDependsOn(...)`. Elles permettent notamment de :
 
-Exemple :
-- Foreign_Annotation::of doit être une fonction envoyée dans sqlJoinDependsOn({ foreignAnnotationOf: () => ... }) 
+- trouver une `ColumnDefinition` depuis une `TableDefinition` et un segment de chemin ;
+- trouver la `TableDefinition` cible d'une `ColumnDefinition` ;
+- obtenir `table` depuis une `TableDefinition` et `column` depuis une `ColumnDefinition` ;
+- obtenir la définition de colonne droite d'une collection 1-N.
 
-Le module sql-join va référencer les classes définies dans join.ts et joins.ts.
+`new Joins(tableDefinition)` reçoit directement la définition racine. `add(columnPath)` parcourt une chaîne telle que
+`client.address.city`, résout les définitions successives avec les dépendances et génère les jointures nécessaires.
 
-Joins va afficher la méthode pour ajouter une jointure à partir d'un chemin.de.propriété, donc parcourant une structure arborescente
-de property.path développée dans la version php d'it.rocks. Là aussi les fonctions à utiliser pour parcourir cette arborescence
-seront à fournir comme dépendances.
+Toutes les dépendances externes au répertoire PHP `framework/sql/join` doivent être remplacées par ce contrat injecté.

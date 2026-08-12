@@ -41,7 +41,9 @@
 		"url": "git+https://github.com/itrocks-ts/sql-join.git"
 	},
 	"scripts": {
-		"build": "tsc"
+		"build": "tsc",
+		"test": "npm run build && npm run test:types && node --test --test-isolation=none test/*.test.js",
+		"test:types": "tsc --ignoreConfig --noEmit --strict --module nodenext --moduleResolution nodenext --target esnext test/dependencies.test.ts"
 	},
-	"version": "0.0.3"
+	"version": "0.1.0"
 }
