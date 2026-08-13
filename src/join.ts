@@ -1,57 +1,10 @@
-import { dependencies } from './dependencies.js'
+import { depends } from './dependencies'
 
-export enum JoinMode {
-	INNER = 'INNER',
-	LEFT  = 'LEFT',
-	RIGHT = 'RIGHT'
-}
-
-export enum JoinType {
-	LINK   = 'LINK',
-	OBJECT = 'OBJECT',
-	SIMPLE = 'SIMPLE'
-}
-
-export type JoinCondition = {
-	leftColumn:  string
-	like?:       boolean
-	rightColumn: string
-}
-
-export type JoinOptions<TableDefinition = unknown, ColumnDefinition = unknown> = {
-	leftAlias?:             string
-	leftColumn:             string
-	leftColumnDefinition?:  ColumnDefinition
-	leftTable:              string
-	leftTableDefinition:    TableDefinition
-	like?:                  boolean
-	mode?:                  JoinMode
-	rightAlias?:            string
-	rightColumn?:           string
-	rightColumnDefinition?: ColumnDefinition
-	rightTable:             string
-	rightTableDefinition:   TableDefinition
-	secondary?:             readonly JoinCondition[]
-	type?:                  JoinType
-}
+export interface Join<TableDefinition = unknown, ColumnDefinition = unknown>
+	extends JoinRequired<TableDefinition>, JoinDefaults<ColumnDefinition> {}
 
 export class Join<TableDefinition = unknown, ColumnDefinition = unknown>
 {
-
-	leftAlias:              string
-	leftColumn:             string
-	leftColumnDefinition?:  ColumnDefinition
-	leftTable:              string
-	leftTableDefinition:    TableDefinition
-	like:                   boolean
-	mode:                   JoinMode
-	rightAlias:             string
-	rightColumn:            string
-	rightColumnDefinition?: ColumnDefinition
-	rightTable:             string
-	rightTableDefinition:   TableDefinition
-	secondary:              JoinCondition[]
-	type:                   JoinType
 
 	constructor(options: JoinOptions<TableDefinition, ColumnDefinition>)
 	{
@@ -61,14 +14,14 @@ export class Join<TableDefinition = unknown, ColumnDefinition = unknown>
 		this.leftTable             = options.leftTable
 		this.leftTableDefinition   = options.leftTableDefinition
 		this.like                  = options.like ?? false
-		this.mode                  = options.mode ?? JoinMode.LEFT
+		this.mode                  = options.mode ?? JoinMode.left
 		this.rightAlias            = options.rightAlias ?? ''
 		this.rightColumn           = options.rightColumn ?? 'id'
 		this.rightColumnDefinition = options.rightColumnDefinition
 		this.rightTable            = options.rightTable
 		this.rightTableDefinition  = options.rightTableDefinition
 		this.secondary             = [...(options.secondary ?? [])]
-		this.type                  = options.type ?? JoinType.SIMPLE
+		this.type                  = options.type ?? JoinType.simple
 	}
 
 	leftSql(): string
@@ -81,14 +34,9 @@ export class Join<TableDefinition = unknown, ColumnDefinition = unknown>
 		return qualified(this.rightAlias || this.rightTable, this.rightColumn)
 	}
 
-	sql(): string
-	{
-		return this.toSql()
-	}
-
 	toSql(): string
 	{
-		const quote = dependencies().quoteIdentifier
+		const quote = depends.quoteIdentifier
 		const alias = this.rightAlias
 		const table = quote(this.rightTable)
 		const as    = alias ? ` AS ${quote(alias)}` : ''
@@ -102,15 +50,54 @@ export class Join<TableDefinition = unknown, ColumnDefinition = unknown>
 		return sql
 	}
 
-	toString(): string
-	{
-		return this.toSql()
-	}
+}
 
+export type JoinCondition = {
+	leftColumn:  string
+	like?:       boolean
+	rightColumn: string
+}
+
+type JoinDefaults<ColumnDefinition> = {
+	leftAlias:             string
+	leftColumnDefinition:  ColumnDefinition | undefined
+	like:                  boolean
+	mode:                  JoinMode
+	rightAlias:            string
+	rightColumn:           string
+	rightColumnDefinition: ColumnDefinition | undefined
+	secondary:             JoinCondition[]
+	type:                  JoinType
+}
+
+export enum JoinMode {
+	inner = 'INNER',
+	left  = 'LEFT',
+	right = 'RIGHT'
+}
+
+export type JoinOptions<TableDefinition = unknown, ColumnDefinition = unknown> =
+	JoinRequired<TableDefinition> & Partial<JoinOptionsDefaults<ColumnDefinition>>
+
+type JoinOptionsDefaults<ColumnDefinition> =
+	Omit<JoinDefaults<ColumnDefinition>, 'secondary'> & { secondary: readonly JoinCondition[] }
+
+type JoinRequired<TableDefinition> = {
+	leftColumn:           string
+	leftTable:            string
+	leftTableDefinition:  TableDefinition
+	rightTable:           string
+	rightTableDefinition: TableDefinition
+}
+
+export enum JoinType {
+	link   = 'link',
+	object = 'object',
+	simple = 'simple'
 }
 
 function qualified(alias: string, column: string): string
 {
-	const quote = dependencies().quoteIdentifier
+	const quote = depends.quoteIdentifier
 	return `${quote(alias)}.${quote(column)}`
 }

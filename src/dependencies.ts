@@ -1,21 +1,22 @@
+
 export type ColumnDefinitions<ColumnDefinition> = Readonly<Record<string, ColumnDefinition>>
 
 export type Dependencies<TableDefinition, ColumnDefinition> = {
-	columnDefinitionOf:        (tableDefinition: TableDefinition, column: string) => ColumnDefinition | undefined
-	columnDefinitionsOf:       (tableDefinition: TableDefinition) => ColumnDefinitions<ColumnDefinition>
-	columnOf:                  (columnDefinition: ColumnDefinition) => string
-	componentOf:               (columnDefinition: ColumnDefinition) => boolean
-	mandatoryOf:               (columnDefinition: ColumnDefinition) => boolean
-	multipleOf:                (columnDefinition: ColumnDefinition) => boolean
-	quoteIdentifier:           (identifier: string) => string
-	renderSql:                 (value: unknown) => string
-	rightColumnDefinitionOf:   (columnDefinition: ColumnDefinition) => ColumnDefinition | undefined
-	scalarOf:                  (columnDefinition: ColumnDefinition) => boolean
-	splitColumnPath:           (columnPath: string) => [leftPath: string, column: string]
-	storedAsValueOf:           (columnDefinition: ColumnDefinition) => boolean
-	tableDefinitionIdentity:   (tableDefinition: TableDefinition) => unknown
-	tableDefinitionOf:         (columnDefinition: ColumnDefinition) => TableDefinition | undefined
-	tableOf:                   (tableDefinition: TableDefinition) => string
+	columnDefinitionOf:      (tableDefinition: TableDefinition, column: string) => ColumnDefinition | undefined
+	columnDefinitionsOf:     (tableDefinition: TableDefinition) => ColumnDefinitions<ColumnDefinition>
+	columnOf:                (columnDefinition: ColumnDefinition) => string
+	componentOf:             (columnDefinition: ColumnDefinition) => boolean
+	mandatoryOf:             (columnDefinition: ColumnDefinition) => boolean
+	multipleOf:              (columnDefinition: ColumnDefinition) => boolean
+	quoteIdentifier:         (identifier: string) => string
+	renderSql:               (value: unknown) => string
+	rightColumnDefinitionOf: (columnDefinition: ColumnDefinition) => ColumnDefinition | undefined
+	scalarOf:                (columnDefinition: ColumnDefinition) => boolean
+	splitColumnPath:         (columnPath: string) => [leftPath: string, column: string]
+	storedAsValueOf:         (columnDefinition: ColumnDefinition) => boolean
+	tableDefinitionIdentity: (tableDefinition: TableDefinition) => unknown
+	tableDefinitionOf:       (columnDefinition: ColumnDefinition) => TableDefinition | undefined
+	tableOf:                 (tableDefinition: TableDefinition) => string
 }
 
 type FreeColumnDefinition = {
@@ -48,7 +49,7 @@ function asFreeTableDefinition(tableDefinition: unknown): FreeTableDefinition
 
 function defaultColumnDefinitionOf(tableDefinition: unknown, column: string): unknown | undefined
 {
-	return dependencies().columnDefinitionsOf(tableDefinition)[column]
+	return depends.columnDefinitionsOf(tableDefinition)[column]
 }
 
 function defaultColumnDefinitionsOf(tableDefinition: unknown): ColumnDefinitions<unknown>
@@ -67,7 +68,9 @@ function defaultScalarOf(columnDefinition: unknown): boolean
 {
 	if (typeof columnDefinition === 'string') return true
 	const freeColumnDefinition = asFreeColumnDefinition(columnDefinition)
-	const kind = (typeof freeColumnDefinition.kind === 'string') ? freeColumnDefinition.kind : undefined
+	const kind = (typeof freeColumnDefinition.kind === 'string')
+		? freeColumnDefinition.kind
+		: undefined
 	return (typeof freeColumnDefinition.scalar === 'boolean')
 		? freeColumnDefinition.scalar
 		: ((kind === 'scalar') || (freeColumnDefinition.target === undefined))
@@ -99,12 +102,7 @@ function isObject(value: unknown): value is Record<string, unknown>
 	return (typeof value === 'object') && (value !== null)
 }
 
-function quoteIdentifier(identifier: string): string
-{
-	return '`' + identifier.replaceAll('`', '``') + '`'
-}
-
-const depends: Dependencies<unknown, unknown> = {
+export const depends: Dependencies<unknown, unknown> = {
 	columnDefinitionOf:        defaultColumnDefinitionOf,
 	columnDefinitionsOf:       defaultColumnDefinitionsOf,
 	columnOf:                  defaultColumnOf,
@@ -112,7 +110,7 @@ const depends: Dependencies<unknown, unknown> = {
 	mandatoryOf:               columnDefinition => Boolean(asFreeColumnDefinition(columnDefinition).mandatory),
 	multipleOf:                columnDefinition => Boolean(asFreeColumnDefinition(columnDefinition).multiple)
 		|| (asFreeColumnDefinition(columnDefinition).kind === 'collection'),
-	quoteIdentifier,
+	quoteIdentifier:           identifier => '`' + identifier.replaceAll('`', '``') + '`',
 	renderSql:                 value => String(value),
 	rightColumnDefinitionOf:   columnDefinition => asFreeColumnDefinition(columnDefinition).right,
 	scalarOf:                  defaultScalarOf,
@@ -121,20 +119,13 @@ const depends: Dependencies<unknown, unknown> = {
 		asFreeColumnDefinition(columnDefinition).storedAsValue
 		?? asFreeColumnDefinition(columnDefinition).stored
 	),
-	tableDefinitionIdentity:   tableDefinition => dependencies().tableOf(tableDefinition),
+	tableDefinitionIdentity:   tableDefinition => depends.tableOf(tableDefinition),
 	tableDefinitionOf:         columnDefinition => asFreeColumnDefinition(columnDefinition).target,
 	tableOf:                   defaultTableOf
 }
 
-export function dependencies<TableDefinition = unknown, ColumnDefinition = unknown>()
-	: Dependencies<TableDefinition, ColumnDefinition>
-{
-	return depends as Dependencies<TableDefinition, ColumnDefinition>
-}
-
 export function sqlJoinDependsOn<TableDefinition, ColumnDefinition>(
 	dependencies: Partial<Dependencies<TableDefinition, ColumnDefinition>>
-)
-{
+) {
 	Object.assign(depends, dependencies)
 }

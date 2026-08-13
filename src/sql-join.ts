@@ -1,12 +1,15 @@
 
-export { sqlJoinDependsOn } from './dependencies.js'
-export { Join }             from './join.js'
-export { JoinMode }         from './join.js'
-export { Joins }            from './joins.js'
-export { JoinType }         from './join.js'
-export { Subquery }         from './subquery.js'
+export { sqlJoinDependsOn } from './dependencies'
 
-export type { ColumnDefinitions } from './dependencies.js'
-export type { Dependencies }      from './dependencies.js'
-export type { JoinCondition }     from './join.js'
-export type { JoinOptions }       from './join.js'
+export { Join }     from './join'
+export { JoinMode } from './join'
+export { JoinType } from './join'
+
+export { Joins }    from './joins'
+
+export { Subquery } from './subquery'
+
+export type { ColumnDefinitions } from './dependencies'
+export type { Dependencies }      from './dependencies'
+export type { JoinCondition }     from './join'
+export type { JoinOptions }       from './join'

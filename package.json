@@ -5,7 +5,9 @@
 	},
 	"description": "SQL join modelling for relational databases",
 	"devDependencies": {
-		"typescript": "^6.0"
+		"@types/node": "^24.13.3",
+		"tsx": "^4.23.12",
+		"typescript": "^7.0"
 	},
 	"engines": {
 		"node": ">=24"
@@ -42,8 +44,8 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"test": "npm run build && npm run test:types && node --test --test-isolation=none test/*.test.js",
-		"test:types": "tsc --ignoreConfig --noEmit --strict --module nodenext --moduleResolution nodenext --target esnext test/dependencies.test.ts"
+		"test": "npm run test:types && tsx --test --test-isolation=none test/sql-join.test.ts",
+		"test:types": "tsc --ignoreConfig --module nodenext --noEmit --types node test/*.test.ts"
 	},
 	"version": "0.1.0"
 }

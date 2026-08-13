@@ -1,32 +1,31 @@
-import { dependencies } from './dependencies.js'
-import { Join }         from './join.js'
-import { JoinMode }     from './join.js'
+import { depends }  from './dependencies'
+import { Join }     from './join'
+import { JoinMode } from './join'
 
 export class Subquery<Query = unknown, Where = unknown> extends Join<undefined, never>
 {
 
-	query?: Query
-	where?: Where
-
-	constructor(query?: Query, where?: Where, rightAlias = '')
-	{
+	constructor(
+		public query?: Query,
+		public where?: Where,
+		rightAlias = ''
+	) {
 		super({
-			leftColumn: '',
-			leftTable: '',
-			leftTableDefinition: undefined,
-			mode: JoinMode.INNER,
+			leftColumn:           '',
+			leftTable:            '',
+			leftTableDefinition:  undefined,
+			mode:                 JoinMode.inner,
 			rightAlias,
-			rightTable: '',
+			rightTable:           '',
 			rightTableDefinition: undefined
 		})
-		this.query = query
-		this.where = where
 	}
 
 	override toSql(): string
 	{
-		const depends = dependencies()
-		const alias   = this.rightAlias ? ` ${depends.quoteIdentifier(this.rightAlias)}` : ''
+		const alias = this.rightAlias
+			? ` ${depends.quoteIdentifier(this.rightAlias)}`
+			: ''
 		return `INNER JOIN (${depends.renderSql(this.query)})${alias}`
 			+ ` ON ${depends.renderSql(this.where)}`
 	}

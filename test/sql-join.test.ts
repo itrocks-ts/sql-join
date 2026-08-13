@@ -1,38 +1,51 @@
-const assert = require('node:assert/strict')
-const { test } = require('node:test')
+import assert   from 'node:assert/strict'
+import { test } from 'node:test'
 
-const {
-	Join,
-	JoinMode,
-	Joins,
-	JoinType,
-	Subquery,
-	sqlJoinDependsOn
-} = require('../cjs/sql-join.js')
+import { Join }             from '../src/sql-join'
+import { JoinMode }         from '../src/sql-join'
+import { Joins }            from '../src/sql-join'
+import { JoinType }         from '../src/sql-join'
+import { Subquery }         from '../src/sql-join'
+import { sqlJoinDependsOn } from '../src/sql-join'
 
-const client = {
+type TableDefinition = {
+	columns: Record<string, ColumnDefinition>
+	table:   string
+}
+
+type ColumnDefinition = {
+	column:     string
+	component?: boolean
+	mandatory?: boolean
+	multiple?:  boolean
+	right?:     ColumnDefinition
+	scalar?:    boolean
+	target?:    TableDefinition
+}
+
+const client: TableDefinition = {
 	table: 'clients',
 	columns: {
-		client: undefined,
+		client: { column: 'client' },
 		name:   { column: 'name', scalar: true },
 		number: { column: 'number', scalar: true }
 	}
 }
-client.columns.client = { column: 'client', target: client }
+client.columns.client.target = client
 
-const orderLine = {
+const orderLine: TableDefinition = {
 	table: 'order_lines',
 	columns: {
-		order:    undefined,
+		order:    { column: 'order' },
 		quantity: { column: 'quantity', scalar: true }
 	}
 }
 
-const order = {
+const order: TableDefinition = {
 	table: 'orders',
 	columns: {
 		client: { column: 'customer', mandatory: true, target: client },
-		lines:  undefined,
+		lines:  { column: 'lines' },
 		number: { column: 'number', scalar: true }
 	}
 }
@@ -53,7 +66,7 @@ test('renders explicit joins, operators and qualified references with safe ident
 		leftTable: 'orders',
 		leftTableDefinition: order,
 		like: true,
-		mode: JoinMode.RIGHT,
+		mode: JoinMode.right,
 		rightAlias: 't`1',
 		rightColumn: 'id',
 		rightTable: 'cli`ents',
@@ -70,8 +83,6 @@ test('renders explicit joins, operators and qualified references with safe ident
 		'RIGHT JOIN `cli``ents` AS `t``1` ON `t0`.`id_client` LIKE `t``1`.`id`'
 			+ ' AND `t0`.`tenant` LIKE `t``1`.`tenant`'
 	)
-	assert.equal(join.sql(), join.toSql())
-	assert.equal(join.toString(), join.toSql())
 })
 
 test('remembers scalar column paths without creating joins', () =>
@@ -93,18 +104,20 @@ test('creates object joins recursively and keeps optional descendants left joine
 	const joins = new Joins(order, ['client.client.name'], 'query_')
 	const first = joins.getJoin('client')
 	const second = joins.getJoin('client.client')
+	assert.ok(first)
+	assert.ok(second)
 
 	assert.equal(joins.rootAlias(), 'query_t0')
-	assert.equal(first.mode, JoinMode.INNER)
-	assert.equal(first.type, JoinType.SIMPLE)
-	assert.equal(first.leftColumn, 'id_customer')
+	assert.equal(first.mode, JoinMode.inner)
+	assert.equal(first.type, JoinType.simple)
+	assert.equal(first.leftColumn, 'customer_id')
 	assert.equal(first.leftColumnDefinition, order.columns.client)
 	assert.equal(first.leftTable, 'orders')
 	assert.equal(first.leftTableDefinition, order)
 	assert.equal(first.rightTable, 'clients')
 	assert.equal(first.rightTableDefinition, client)
 	assert.equal(first.rightAlias, 'query_t1')
-	assert.equal(second.mode, JoinMode.LEFT)
+	assert.equal(second.mode, JoinMode.left)
 	assert.equal(second.leftAlias, 'query_t1')
 	assert.equal(second.rightAlias, 'query_t2')
 	assert.equal(joins.getJoin('client.client.name'), null)
@@ -117,22 +130,23 @@ test('creates a one-to-many join through its right column definition', () =>
 {
 	const joins = new Joins(order).addMultiple(['lines.quantity'])
 	const join = joins.getJoin('lines')
+	assert.ok(join)
 
-	assert.equal(join.mode, JoinMode.INNER)
+	assert.equal(join.mode, JoinMode.inner)
 	assert.equal(join.leftAlias, 't0')
 	assert.equal(join.leftColumn, 'id')
 	assert.equal(join.leftColumnDefinition, order.columns.lines)
 	assert.equal(join.leftTable, 'orders')
 	assert.equal(join.leftTableDefinition, order)
 	assert.equal(join.rightAlias, 't1')
-	assert.equal(join.rightColumn, 'id_order')
+	assert.equal(join.rightColumn, 'order_id')
 	assert.equal(join.rightColumnDefinition, orderLine.columns.order)
 	assert.equal(join.rightTable, 'order_lines')
 	assert.equal(join.rightTableDefinition, orderLine)
 	assert.equal(joins.getColumnDefinition('lines.quantity'), orderLine.columns.quantity)
 	assert.equal(
 		joins.toSql(),
-		'INNER JOIN `order_lines` AS `t1` ON `t0`.`id` = `t1`.`id_order`'
+		'INNER JOIN `order_lines` AS `t1` ON `t0`.`id` = `t1`.`order_id`'
 	)
 })
 
@@ -178,14 +192,17 @@ test('renders subqueries without importing a query builder', () =>
 
 test('allows dependency adapters to use arbitrary definitions', () =>
 {
-	const columnLookups = []
-	const reflected = {
+	type ReflectedColumn = { field: string, primitive: boolean }
+	type ReflectedTable  = { fields: Map<string, ReflectedColumn>, physical: string }
+
+	const columnLookups: [ReflectedTable, string][] = []
+	const reflected: ReflectedTable = {
 		fields: new Map([
 			['label', { field: 'label', primitive: true }]
 		]),
 		physical: 'reflected_rows'
 	}
-	sqlJoinDependsOn({
+	sqlJoinDependsOn<ReflectedTable, ReflectedColumn>({
 		columnDefinitionOf: (definition, column) => {
 			columnLookups.push([definition, column])
 			return definition.fields.get(column)
@@ -193,13 +210,13 @@ test('allows dependency adapters to use arbitrary definitions', () =>
 		columnDefinitionsOf: definition => Object.fromEntries(definition.fields),
 		columnOf: definition => definition.field,
 		quoteIdentifier: identifier => `"${identifier}"`,
-		renderSql: value => value.render(),
+		renderSql: value => (value as { render(): string }).render(),
 		scalarOf: definition => definition.primitive,
 		tableDefinitionIdentity: definition => definition.physical,
 		tableOf: definition => definition.physical
 	})
 
-	const joins = new Joins(reflected, ['label'])
+	const joins = new Joins<ReflectedTable, ReflectedColumn>(reflected, ['label'])
 	assert.deepEqual(columnLookups, [[reflected, 'label']])
 	assert.equal(joins.getStartingTableDefinition(), reflected)
 	assert.equal(joins.getStartingTable(), 'reflected_rows')

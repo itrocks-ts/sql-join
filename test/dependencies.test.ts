@@ -1,6 +1,6 @@
-import { Dependencies }     from '../cjs/sql-join.js'
-import { Joins }            from '../cjs/sql-join.js'
-import { sqlJoinDependsOn } from '../cjs/sql-join.js'
+import { Dependencies }     from '../src/sql-join'
+import { Joins }            from '../src/sql-join'
+import { sqlJoinDependsOn } from '../src/sql-join'
 
 type TableDefinition = {
 	columns: Record<string, ColumnDefinition>

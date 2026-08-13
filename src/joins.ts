@@ -1,8 +1,8 @@
-import { Dependencies } from './dependencies.js'
-import { dependencies } from './dependencies.js'
-import { Join }         from './join.js'
-import { JoinMode }     from './join.js'
-import { JoinType }     from './join.js'
+import { Dependencies } from './dependencies'
+import { depends }      from './dependencies'
+import { Join }         from './join'
+import { JoinMode }     from './join'
+import { JoinType }     from './join'
 
 export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 {
@@ -10,17 +10,16 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	readonly aliasPrefix: string
 
 	private aliasCounter = 1
-	private readonly columnDefinitionsByTableDefinition
-		= new Map<unknown, ReadonlyMap<string, ColumnDefinition>>()
-	private readonly joinsByColumnPath = new Map<string, Join<TableDefinition, ColumnDefinition> | null>()
-	private readonly orderedJoins: Join<TableDefinition, ColumnDefinition>[] = []
-	private readonly startingTable: string
-	private readonly startingTableDefinition: TableDefinition
-	private readonly tableDefinitions = new Map<string, TableDefinition>()
+	private readonly columnDefinitionsByTableDefinition = new Map<unknown, ReadonlyMap<string, ColumnDefinition>>()
+	private readonly joinsByColumnPath                  = new Map<string, Join<TableDefinition, ColumnDefinition> | null>()
+	private readonly orderedJoins:                      Join<TableDefinition, ColumnDefinition>[] = []
+	private readonly startingTable:                     string
+	private readonly startingTableDefinition:           TableDefinition
+	private readonly tableDefinitions                   = new Map<string, TableDefinition>()
 
 	private get depends(): Dependencies<TableDefinition, ColumnDefinition>
 	{
-		return dependencies<TableDefinition, ColumnDefinition>()
+		return depends as Dependencies<TableDefinition, ColumnDefinition>
 	}
 
 	constructor(startingTableDefinition: TableDefinition, columnPaths: readonly string[] = [], aliasPrefix = '')
@@ -189,8 +188,8 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	{
 		const leftTable  = this.depends.tableOf(leftTableDefinition)
 		const mode       = this.depends.mandatoryOf(columnDefinition) && this.isMandatoryPath(leftPath)
-			? JoinMode.INNER
-			: JoinMode.LEFT
+			? JoinMode.inner
+			: JoinMode.left
 		const rightTable = this.depends.tableOf(rightTableDefinition)
 		if (this.depends.multipleOf(columnDefinition) || this.depends.componentOf(columnDefinition)) {
 			const rightColumnDefinition = this.depends.rightColumnDefinitionOf(columnDefinition)
@@ -205,16 +204,16 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 				leftTableDefinition,
 				mode,
 				rightAlias: this.nextAlias(),
-				rightColumn: `id_${this.depends.columnOf(rightColumnDefinition)}`,
+				rightColumn: `${this.depends.columnOf(rightColumnDefinition)}_id`,
 				rightColumnDefinition,
 				rightTable,
 				rightTableDefinition,
-				type: depth ? JoinType.SIMPLE : JoinType.OBJECT
+				type: depth ? JoinType.simple : JoinType.object
 			})
 		}
 		return new Join({
 			leftAlias: this.aliasOfLeft(leftPath),
-			leftColumn: `id_${this.depends.columnOf(columnDefinition)}`,
+			leftColumn: `${this.depends.columnOf(columnDefinition)}_id`,
 			leftColumnDefinition: columnDefinition,
 			leftTable,
 			leftTableDefinition,
@@ -223,7 +222,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 			rightColumn: 'id',
 			rightTable,
 			rightTableDefinition,
-			type: depth ? JoinType.SIMPLE : JoinType.OBJECT
+			type: depth ? JoinType.simple : JoinType.object
 		})
 	}
 
@@ -254,7 +253,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	private isMandatoryPath(columnPath: string): boolean
 	{
 		if (!columnPath) return true
-		return this.joinsByColumnPath.get(columnPath)?.mode === JoinMode.INNER
+		return this.joinsByColumnPath.get(columnPath)?.mode === JoinMode.inner
 	}
 
 	private nextAlias(): string
