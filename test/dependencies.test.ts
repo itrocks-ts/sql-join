@@ -8,14 +8,14 @@ type TableDefinition = {
 }
 
 type ColumnDefinition = {
-	column:  string
+	name:    string
 	scalar:  boolean
 	target?: TableDefinition
 }
 
 const tableDefinition: TableDefinition = {
 	columns: {
-		number: { column: 'number', scalar: true }
+		number: { name: 'number', scalar: true }
 	},
 	table: 'orders'
 }
@@ -23,7 +23,7 @@ const tableDefinition: TableDefinition = {
 const metadataDependencies: Partial<Dependencies<TableDefinition, ColumnDefinition>> = {
 	columnDefinitionOf:  (definition, column) => definition.columns[column],
 	columnDefinitionsOf: definition => definition.columns,
-	columnOf:            definition => definition.column,
+	columnOf:            definition => definition.name,
 	scalarOf:            definition => definition.scalar,
 	tableDefinitionIdentity: definition => definition.table,
 	tableDefinitionOf:   definition => definition.target,

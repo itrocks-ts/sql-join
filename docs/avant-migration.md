@@ -7,9 +7,11 @@ Ce document prépare la migration de `ITRocks\Framework\Sql\Join` vers
 injecter et les fonctionnalités à livrer par paliers.
 
 Le package TypeScript doit rester indépendant du framework et de tout moteur de
-base de données. Il manipule quatre notions : `TableDefinition` et `ColumnDefinition`
-sont des objets libres décrivant le modèle, tandis que `table` et `column` sont les
-noms SQL correspondants. Leur résolution est fournie à `sqlJoinDependsOn(...)`.
+base de données. Il manipule quatre notions : `TableDefinition` et
+`ColumnDefinition` sont des objets libres décrivant le modèle, tandis que
+`table` et `column` sont les noms SQL résolus par les dépendances. Ces noms ne
+sont pas des propriétés imposées aux définitions. Leur résolution est fournie à
+`sqlJoinDependsOn(...)`.
 
 Sources étudiées, à la révision PHP `8454258fc92574cc5ad35207293311f56d7fbb42` :
 
@@ -139,7 +141,7 @@ Les noms ci-dessous décrivent le besoin, pas encore une signature définitive.
 | Table cible | `TableDefinition` cible d'une relation décrite par une `ColumnDefinition` | 1 |
 | Découpage d'un `columnPath` | fonction consciente des parenthèses ; une valeur par défaut locale est possible | 1 |
 | Caractéristiques d'une colonne | fonctions booléennes sur `ColumnDefinition` | 1 |
-| Nom SQL `column` | nom stocké utilisé avec les conventions de clés étrangères | 1 |
+| Nom SQL `column` | nom physique final, conventions de nommage et alias déjà appliqués | 1 |
 | Colonne droite | `ColumnDefinition` inverse d'une collection 1-N | 1 |
 | Colonne composante | information équivalente à `@component` | 1 |
 | Sécurisation d'un nom SQL | fonction de citation ; valeur par défaut avec accents graves, remplaçable par l'adaptateur du `DataSource` | 1 |

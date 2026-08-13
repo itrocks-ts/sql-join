@@ -204,7 +204,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 				leftTableDefinition,
 				mode,
 				rightAlias: this.nextAlias(),
-				rightColumn: `${this.depends.columnOf(rightColumnDefinition)}_id`,
+				rightColumn: this.depends.columnOf(rightColumnDefinition),
 				rightColumnDefinition,
 				rightTable,
 				rightTableDefinition,
@@ -213,7 +213,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 		}
 		return new Join({
 			leftAlias: this.aliasOfLeft(leftPath),
-			leftColumn: `${this.depends.columnOf(columnDefinition)}_id`,
+			leftColumn: this.depends.columnOf(columnDefinition),
 			leftColumnDefinition: columnDefinition,
 			leftTable,
 			leftTableDefinition,

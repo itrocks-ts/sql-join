@@ -3,7 +3,7 @@
 		"name": "Baptiste Pillot",
 		"email": "baptiste@pillot.fr"
 	},
-	"description": "SQL join modelling for relational databases",
+	"description": "Builds and renders SQL JOIN clauses from relational table metadata",
 	"devDependencies": {
 		"@types/node": "^24.13.3",
 		"tsx": "^4.23.12",
@@ -23,18 +23,18 @@
 	"keywords": [
 		"backend",
 		"database",
-		"inner-join",
+		"inner join",
 		"it.rocks",
 		"join",
-		"left-join",
-		"query",
-		"query-builder",
-		"outer-join",
-		"query",
+		"left join",
+		"metadata",
+		"query builder",
 		"relational",
-		"right-join",
+		"right join",
 		"sql",
-		"table"
+		"subquery",
+		"table",
+		"typescript"
 	],
 	"license": "ISC",
 	"name": "@itrocks/sql-join",
@@ -47,5 +47,5 @@
 		"test": "npm run test:types && tsx --test --test-isolation=none test/sql-join.test.ts",
 		"test:types": "tsc --ignoreConfig --module nodenext --noEmit --types node test/*.test.ts"
 	},
-	"version": "0.1.0"
+	"version": "0.1.1"
 }

@@ -20,11 +20,11 @@ export type Dependencies<TableDefinition, ColumnDefinition> = {
 }
 
 type FreeColumnDefinition = {
-	column?:        unknown
-	component?:     unknown
+ 	component?:     unknown
 	kind?:          unknown
 	mandatory?:     unknown
 	multiple?:      unknown
+	name?:          unknown
 	right?:         unknown
 	scalar?:        unknown
 	stored?:        unknown
@@ -60,8 +60,9 @@ function defaultColumnDefinitionsOf(tableDefinition: unknown): ColumnDefinitions
 function defaultColumnOf(columnDefinition: unknown): string
 {
 	if (typeof columnDefinition === 'string') return columnDefinition
-	const column = asFreeColumnDefinition(columnDefinition).column
-	return (typeof column === 'string') ? column : ''
+	const name = asFreeColumnDefinition(columnDefinition).name
+	if (typeof name !== 'string') return ''
+	return name + (depends.scalarOf(columnDefinition) ? '' : '_id')
 }
 
 function defaultScalarOf(columnDefinition: unknown): boolean

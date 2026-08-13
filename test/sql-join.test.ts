@@ -14,10 +14,10 @@ type TableDefinition = {
 }
 
 type ColumnDefinition = {
-	column:     string
 	component?: boolean
 	mandatory?: boolean
 	multiple?:  boolean
+	name:       string
 	right?:     ColumnDefinition
 	scalar?:    boolean
 	target?:    TableDefinition
@@ -26,9 +26,9 @@ type ColumnDefinition = {
 const client: TableDefinition = {
 	table: 'clients',
 	columns: {
-		client: { column: 'client' },
-		name:   { column: 'name', scalar: true },
-		number: { column: 'number', scalar: true }
+		client: { name: 'client' },
+		name:   { name: 'name', scalar: true },
+		number: { name: 'number', scalar: true }
 	}
 }
 client.columns.client.target = client
@@ -36,26 +36,26 @@ client.columns.client.target = client
 const orderLine: TableDefinition = {
 	table: 'order_lines',
 	columns: {
-		order:    { column: 'order' },
-		quantity: { column: 'quantity', scalar: true }
+		order:    { name: 'order' },
+		quantity: { name: 'quantity', scalar: true }
 	}
 }
 
 const order: TableDefinition = {
 	table: 'orders',
 	columns: {
-		client: { column: 'customer', mandatory: true, target: client },
-		lines:  { column: 'lines' },
-		number: { column: 'number', scalar: true }
+		client: { name: 'buyer_reference', mandatory: true, target: client },
+		lines:  { name: 'lines' },
+		number: { name: 'number', scalar: true }
 	}
 }
-orderLine.columns.order = { column: 'order', mandatory: true, target: order }
+orderLine.columns.order = { name: 'parent_order', mandatory: true, target: order }
 order.columns.lines = {
-	column: 'lines',
-		right: orderLine.columns.order,
 	mandatory: true,
-	multiple: true,
-	target: orderLine
+	multiple:  true,
+	name:      'lines',
+	right:     orderLine.columns.order,
+	target:    orderLine
 }
 
 test('renders explicit joins, operators and qualified references with safe identifiers', () =>
@@ -80,8 +80,7 @@ test('renders explicit joins, operators and qualified references with safe ident
 	assert.equal(join.rightTableDefinition, client)
 	assert.equal(
 		join.toSql(),
-		'RIGHT JOIN `cli``ents` AS `t``1` ON `t0`.`id_client` LIKE `t``1`.`id`'
-			+ ' AND `t0`.`tenant` LIKE `t``1`.`tenant`'
+		'RIGHT JOIN `cli``ents` AS `t``1` ON `t0`.`id_client` LIKE `t``1`.`id` AND `t0`.`tenant` LIKE `t``1`.`tenant`'
 	)
 })
 
@@ -110,7 +109,7 @@ test('creates object joins recursively and keeps optional descendants left joine
 	assert.equal(joins.rootAlias(), 'query_t0')
 	assert.equal(first.mode, JoinMode.inner)
 	assert.equal(first.type, JoinType.simple)
-	assert.equal(first.leftColumn, 'customer_id')
+	assert.equal(first.leftColumn, 'buyer_reference_id')
 	assert.equal(first.leftColumnDefinition, order.columns.client)
 	assert.equal(first.leftTable, 'orders')
 	assert.equal(first.leftTableDefinition, order)
@@ -139,14 +138,14 @@ test('creates a one-to-many join through its right column definition', () =>
 	assert.equal(join.leftTable, 'orders')
 	assert.equal(join.leftTableDefinition, order)
 	assert.equal(join.rightAlias, 't1')
-	assert.equal(join.rightColumn, 'order_id')
+	assert.equal(join.rightColumn, 'parent_order_id')
 	assert.equal(join.rightColumnDefinition, orderLine.columns.order)
 	assert.equal(join.rightTable, 'order_lines')
 	assert.equal(join.rightTableDefinition, orderLine)
 	assert.equal(joins.getColumnDefinition('lines.quantity'), orderLine.columns.quantity)
 	assert.equal(
 		joins.toSql(),
-		'INNER JOIN `order_lines` AS `t1` ON `t0`.`id` = `t1`.`order_id`'
+		'INNER JOIN `order_lines` AS `t1` ON `t0`.`id` = `t1`.`parent_order_id`'
 	)
 })
 
@@ -174,7 +173,7 @@ test('is idempotent and accepts a manually constructed join', () =>
 test('reports incomplete relationship definitions', () =>
 {
 	const invalid = {
-		columns: { children: { column: 'children', multiple: true, target: orderLine } },
+		columns: { children: { name: 'children', multiple: true, target: orderLine } },
 		table: 'invalid'
 	}
 	assert.throws(() => new Joins(invalid, ['children']), /has no right column definition/)
@@ -190,15 +189,22 @@ test('renders subqueries without importing a query builder', () =>
 	)
 })
 
-test('allows dependency adapters to use arbitrary definitions', () =>
+test('allows dependency adapters to resolve arbitrary definitions and physical column names', () =>
 {
-	type ReflectedColumn = { field: string, primitive: boolean }
+	type ReflectedColumn = { field: string, primitive: boolean, target?: ReflectedTable }
 	type ReflectedTable  = { fields: Map<string, ReflectedColumn>, physical: string }
 
 	const columnLookups: [ReflectedTable, string][] = []
+	const owner: ReflectedTable = {
+		fields: new Map([
+			['label', { field: 'display_label', primitive: true }]
+		]),
+		physical: 'owners'
+	}
 	const reflected: ReflectedTable = {
 		fields: new Map([
-			['label', { field: 'label', primitive: true }]
+			['label', { field: 'display_label', primitive: true }],
+			['owner', { field: 'assigned_owner', primitive: false, target: owner }]
 		]),
 		physical: 'reflected_rows'
 	}
@@ -213,14 +219,19 @@ test('allows dependency adapters to use arbitrary definitions', () =>
 		renderSql: value => (value as { render(): string }).render(),
 		scalarOf: definition => definition.primitive,
 		tableDefinitionIdentity: definition => definition.physical,
+		tableDefinitionOf: definition => definition.target,
 		tableOf: definition => definition.physical
 	})
 
-	const joins = new Joins<ReflectedTable, ReflectedColumn>(reflected, ['label'])
-	assert.deepEqual(columnLookups, [[reflected, 'label']])
+	const joins = new Joins<ReflectedTable, ReflectedColumn>(reflected, ['label', 'owner.label'])
+	assert.deepEqual(columnLookups, [[reflected, 'label'], [reflected, 'owner'], [owner, 'label']])
 	assert.equal(joins.getStartingTableDefinition(), reflected)
 	assert.equal(joins.getStartingTable(), 'reflected_rows')
 	assert.equal(joins.getColumnDefinition('label'), reflected.fields.get('label'))
+	assert.equal(
+		joins.toSql(),
+		'LEFT JOIN "owners" AS "t1" ON "t0"."assigned_owner" = "t1"."id"'
+	)
 	assert.equal(new Subquery({ render: () => 'SELECT 1' }, { render: () => '1 = 1' }, 'q').toSql(),
 		'INNER JOIN (SELECT 1) "q" ON 1 = 1')
 })
