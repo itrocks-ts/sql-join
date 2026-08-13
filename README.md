@@ -42,9 +42,9 @@ type TableDefinition = {
 type ColumnDefinition = {
 	component?:     boolean
 	kind?:          'collection' | 'scalar' | string
-	mandatory?:     boolean
 	multiple?:      boolean
 	name:           string
+	required?:      boolean
 	right?:         ColumnDefinition
 	scalar?:        boolean
 	stored?:        boolean
@@ -70,9 +70,9 @@ target definition that points back to the left table.
 import { Joins, sqlJoinDependsOn } from '@itrocks/sql-join'
 
 type ColumnDefinition = {
-	mandatory?: boolean
 	multiple?:  boolean
 	name:       string
+	required?:  boolean
 	right?:     ColumnDefinition
 	scalar?:    boolean
 	target?:    TableDefinition
@@ -101,7 +101,7 @@ const orderLines: TableDefinition = {
 const orders: TableDefinition = {
 	name: 'Order',
 	columns: {
-		customer: { name: 'customer', mandatory: true, target: customers },
+		customer: { name: 'customer', required: true, target: customers },
 		lines:    { name: 'lines' },
 		number:   { name: 'number', scalar: true }
 	}
@@ -109,13 +109,13 @@ const orders: TableDefinition = {
 
 orderLines.columns.order = {
 	name: 'order',
-	mandatory: true,
+	required: true,
 	target: orders
 }
 orders.columns.lines = {
 	name: 'lines',
-	mandatory: true,
 	multiple: true,
+	required: true,
 	right: orderLines.columns.order,
 	target: orderLines
 }
@@ -133,7 +133,6 @@ const columnNames: Record<string, string> = {
 
 sqlJoinDependsOn<TableDefinition, ColumnDefinition>({
 	columnOf: definition => columnNames[definition.name] ?? definition.name,
-	tableDefinitionIdentity: definition => definition.name,
 	tableOf: definition => tableNames[definition.name] ?? definition.name
 })
 
@@ -159,8 +158,8 @@ aliases start at `t1`; pass an alias prefix to the constructor when several
 
 ## Behaviour
 
-- A mandatory relationship uses `INNER JOIN` only when every relationship
-  before it is also mandatory. Otherwise, it uses `LEFT JOIN`.
+- A required relationship uses `INNER JOIN` only when every relationship
+  before it is also required. Otherwise, it uses `LEFT JOIN`.
 - Paths and intermediate relationships are added idempotently. Adding the same
   path again returns the previously generated `Join` or `null`.
 - Scalar and `storedAsValue`/`stored` columns are registered as paths but do not

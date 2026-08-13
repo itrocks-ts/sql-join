@@ -17,6 +17,7 @@
 		"LICENSE",
 		"README.md",
 		"cjs",
+		"docs/dependencies.md",
 		"!*.map"
 	],
 	"homepage": "https://it.rocks",
@@ -47,5 +48,5 @@
 		"test": "npm run test:types && tsx --test --test-isolation=none test/sql-join.test.ts",
 		"test:types": "tsc --ignoreConfig --module nodenext --noEmit --types node test/*.test.ts"
 	},
-	"version": "0.1.1"
+	"version": "0.1.2"
 }

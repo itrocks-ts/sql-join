@@ -15,9 +15,9 @@ type TableDefinition = {
 
 type ColumnDefinition = {
 	component?: boolean
-	mandatory?: boolean
 	multiple?:  boolean
 	name:       string
+	required?:  boolean
 	right?:     ColumnDefinition
 	scalar?:    boolean
 	target?:    TableDefinition
@@ -44,16 +44,16 @@ const orderLine: TableDefinition = {
 const order: TableDefinition = {
 	table: 'orders',
 	columns: {
-		client: { name: 'buyer_reference', mandatory: true, target: client },
+		client: { name: 'buyer_reference', required: true, target: client },
 		lines:  { name: 'lines' },
 		number: { name: 'number', scalar: true }
 	}
 }
-orderLine.columns.order = { name: 'parent_order', mandatory: true, target: order }
+orderLine.columns.order = { name: 'parent_order', required: true, target: order }
 order.columns.lines = {
-	mandatory: true,
 	multiple:  true,
 	name:      'lines',
+	required:  true,
 	right:     orderLine.columns.order,
 	target:    orderLine
 }
@@ -99,7 +99,7 @@ test('remembers scalar column paths without creating joins', () =>
 
 test('creates object joins recursively and keeps optional descendants left joined', () =>
 {
-	client.columns.client.mandatory = false
+	client.columns.client.required = false
 	const joins = new Joins(order, ['client.client.name'], 'query_')
 	const first = joins.getJoin('client')
 	const second = joins.getJoin('client.client')
@@ -194,7 +194,8 @@ test('allows dependency adapters to resolve arbitrary definitions and physical c
 	type ReflectedColumn = { field: string, primitive: boolean, target?: ReflectedTable }
 	type ReflectedTable  = { fields: Map<string, ReflectedColumn>, physical: string }
 
-	const columnLookups: [ReflectedTable, string][] = []
+	const columnLookups:   [ReflectedTable, string][]         = []
+	const metadataLookups: [string, ReflectedTable, string][] = []
 	const owner: ReflectedTable = {
 		fields: new Map([
 			['label', { field: 'display_label', primitive: true }]
@@ -215,16 +216,27 @@ test('allows dependency adapters to resolve arbitrary definitions and physical c
 		},
 		columnDefinitionsOf: definition => Object.fromEntries(definition.fields),
 		columnOf: definition => definition.field,
+		componentOf: (definition, column) => {
+			metadataLookups.push(['component', definition, column])
+			return false
+		},
+		isScalar: definition => definition.primitive,
 		quoteIdentifier: identifier => `"${identifier}"`,
 		renderSql: value => (value as { render(): string }).render(),
-		scalarOf: definition => definition.primitive,
-		tableDefinitionIdentity: definition => definition.physical,
+		requiredOf: (definition, column) => {
+			metadataLookups.push(['required', definition, column])
+			return false
+		},
 		tableDefinitionOf: definition => definition.target,
 		tableOf: definition => definition.physical
 	})
 
 	const joins = new Joins<ReflectedTable, ReflectedColumn>(reflected, ['label', 'owner.label'])
 	assert.deepEqual(columnLookups, [[reflected, 'label'], [reflected, 'owner'], [owner, 'label']])
+	assert.deepEqual(metadataLookups, [
+		['required', reflected, 'owner'],
+		['component', reflected, 'owner']
+	])
 	assert.equal(joins.getStartingTableDefinition(), reflected)
 	assert.equal(joins.getStartingTable(), 'reflected_rows')
 	assert.equal(joins.getColumnDefinition('label'), reflected.fields.get('label'))

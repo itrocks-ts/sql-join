@@ -8,9 +8,12 @@ type TableDefinition = {
 }
 
 type ColumnDefinition = {
-	name:    string
-	scalar:  boolean
-	target?: TableDefinition
+	collection?: boolean
+	component?: boolean
+	name:       string
+	required?:  boolean
+	scalar:     boolean
+	target?:    TableDefinition
 }
 
 const tableDefinition: TableDefinition = {
@@ -24,8 +27,10 @@ const metadataDependencies: Partial<Dependencies<TableDefinition, ColumnDefiniti
 	columnDefinitionOf:  (definition, column) => definition.columns[column],
 	columnDefinitionsOf: definition => definition.columns,
 	columnOf:            definition => definition.name,
-	scalarOf:            definition => definition.scalar,
-	tableDefinitionIdentity: definition => definition.table,
+	componentOf:         (definition, column) => Boolean(definition.columns[column]?.component),
+	isCollection:        definition => Boolean(definition.collection),
+	isScalar:            definition => definition.scalar,
+	requiredOf:          (definition, column) => Boolean(definition.columns[column]?.required),
 	tableDefinitionOf:   definition => definition.target,
 	tableOf:             definition => definition.table
 }

@@ -10,7 +10,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	readonly aliasPrefix: string
 
 	private aliasCounter = 1
-	private readonly columnDefinitionsByTableDefinition = new Map<unknown, ReadonlyMap<string, ColumnDefinition>>()
+	private readonly columnDefinitionsByTableDefinition = new Map<TableDefinition, ReadonlyMap<string, ColumnDefinition>>()
 	private readonly joinsByColumnPath                  = new Map<string, Join<TableDefinition, ColumnDefinition> | null>()
 	private readonly orderedJoins:                      Join<TableDefinition, ColumnDefinition>[] = []
 	private readonly startingTable:                     string
@@ -49,7 +49,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 		if (columnDefinition === undefined) {
 			throw new Error(`Unknown column '${column}' on table '${this.depends.tableOf(leftTableDefinition)}'`)
 		}
-		if (this.depends.scalarOf(columnDefinition) || this.depends.storedAsValueOf(columnDefinition)) {
+		if (this.depends.isScalar(columnDefinition) || this.depends.storedAsValueOf(columnDefinition)) {
 			this.joinsByColumnPath.set(columnPath, null)
 			return null
 		}
@@ -61,6 +61,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 		const join = this.createJoin(
 			leftTableDefinition,
 			rightTableDefinition,
+			column,
 			columnDefinition,
 			leftPath,
 			columnPath,
@@ -180,6 +181,7 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	private createJoin(
 		leftTableDefinition: TableDefinition,
 		rightTableDefinition: TableDefinition,
+		column: string,
 		columnDefinition: ColumnDefinition,
 		leftPath: string,
 		columnPath: string,
@@ -187,11 +189,11 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 	): Join<TableDefinition, ColumnDefinition>
 	{
 		const leftTable  = this.depends.tableOf(leftTableDefinition)
-		const mode       = this.depends.mandatoryOf(columnDefinition) && this.isMandatoryPath(leftPath)
+		const mode       = this.depends.requiredOf(leftTableDefinition, column) && this.isRequiredPath(leftPath)
 			? JoinMode.inner
 			: JoinMode.left
 		const rightTable = this.depends.tableOf(rightTableDefinition)
-		if (this.depends.multipleOf(columnDefinition) || this.depends.componentOf(columnDefinition)) {
+		if (this.depends.isCollection(columnDefinition) || this.depends.componentOf(leftTableDefinition, column)) {
 			const rightColumnDefinition = this.depends.rightColumnDefinitionOf(columnDefinition)
 			if (rightColumnDefinition === undefined) {
 				throw new Error(`Relationship column '${columnPath}' has no right column definition`)
@@ -241,16 +243,15 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 
 	private columnDefinitionsFor(tableDefinition: TableDefinition): ReadonlyMap<string, ColumnDefinition>
 	{
-		const identity = this.depends.tableDefinitionIdentity(tableDefinition)
-		let columnDefinitions = this.columnDefinitionsByTableDefinition.get(identity)
+		let columnDefinitions = this.columnDefinitionsByTableDefinition.get(tableDefinition)
 		if (!columnDefinitions) {
 			this.rememberColumnDefinitions(tableDefinition)
-			columnDefinitions = this.columnDefinitionsByTableDefinition.get(identity) ?? new Map()
+			columnDefinitions = this.columnDefinitionsByTableDefinition.get(tableDefinition) ?? new Map()
 		}
 		return columnDefinitions
 	}
 
-	private isMandatoryPath(columnPath: string): boolean
+	private isRequiredPath(columnPath: string): boolean
 	{
 		if (!columnPath) return true
 		return this.joinsByColumnPath.get(columnPath)?.mode === JoinMode.inner
@@ -263,10 +264,9 @@ export class Joins<TableDefinition = unknown, ColumnDefinition = unknown>
 
 	private rememberColumnDefinitions(tableDefinition: TableDefinition): void
 	{
-		const identity = this.depends.tableDefinitionIdentity(tableDefinition)
-		if (this.columnDefinitionsByTableDefinition.has(identity)) return
+		if (this.columnDefinitionsByTableDefinition.has(tableDefinition)) return
 		const definitions = this.depends.columnDefinitionsOf(tableDefinition)
-		this.columnDefinitionsByTableDefinition.set(identity, new Map(Object.entries(definitions)))
+		this.columnDefinitionsByTableDefinition.set(tableDefinition, new Map(Object.entries(definitions)))
 	}
 
 }
