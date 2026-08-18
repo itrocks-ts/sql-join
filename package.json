@@ -5,8 +5,8 @@
 	},
 	"description": "Builds and renders SQL JOIN clauses from relational table metadata",
 	"devDependencies": {
-		"@types/node": "^24.13.3",
-		"tsx": "^4.23.12",
+		"@types/node": "^24.10",
+		"tsx": "^4.23",
 		"typescript": "^7.0"
 	},
 	"engines": {
@@ -48,5 +48,5 @@
 		"test": "npm run test:types && tsx --test --test-isolation=none test/sql-join.test.ts",
 		"test:types": "tsc --ignoreConfig --module nodenext --noEmit --types node test/*.test.ts"
 	},
-	"version": "0.1.2"
+	"version": "0.1.3"
 }
